@@ -1,228 +1,201 @@
 "use client";
 
-import React, { useState } from 'react';
-import { 
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  User,
-  CheckCircle,
-  ArrowRight
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import BackgroundElements from '../../components/ui/BackgroundElements';
+import BrandSection from '../../components/auth/BrandSection';
+import ModeToggle from '../../components/auth/ModeToggle';
+import AuthForm from '../../components/auth/AuthForm';
+import {
+  LoginFormData,
+  SignupFormData,
+  ValidationErrors,
+  validateLoginForm,
+  validateSignupForm,
+  isFormValid,
+  clearFieldError
+} from '../../utils/validation';
+import { loginUser, signupUser } from '../../utils/auth-api';
 
 const TaskFlowAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formData, setFormData] = useState({
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Separate states for login and signup forms
+  const [loginFormData, setLoginFormData] = useState<LoginFormData>({
+    email: '',
+    password: ''
+  });
+  
+  const [signupFormData, setSignupFormData] = useState<SignupFormData>({
     name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+  // Validation errors
+  const [loginErrors, setLoginErrors] = useState<ValidationErrors>({});
+  const [signupErrors, setSignupErrors] = useState<ValidationErrors>({});
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+
+  const handleLoginInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setLoginFormData({
+      ...loginFormData,
+      [name]: value
     });
+    // Clear error when user starts typing using helper function
+    if (loginErrors[name]) {
+      setLoginErrors(clearFieldError(loginErrors, name));
+    }
+  };
+  
+  const handleSignupInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setSignupFormData({
+      ...signupFormData,
+      [name]: value
+    });
+    // Clear error when user starts typing using helper function
+    if (signupErrors[name]) {
+      setSignupErrors(clearFieldError(signupErrors, name));
+    }
   };
 
-  const handleSubmit = () => {
-    console.log('Form submitted:', formData);
-    // Handle authentication logic here
+  const handleSubmit = async () => {
+    // First validate the form
+    let errors: ValidationErrors = {};
+    
+    if (isLogin) {
+      errors = validateLoginForm(loginFormData);
+      setLoginErrors(errors);
+    } else {
+      errors = validateSignupForm(signupFormData);
+      setSignupErrors(errors);
+    }
+    
+    if (!isFormValid(errors)) {
+      return; // Don't submit if validation fails
+    }
+
+    // Start loading
+    setIsSubmitting(true);
+
+    try {
+      if (isLogin) {
+        // Call login API
+        const result = await loginUser(loginFormData);
+        
+        if (result.success) {
+          console.log('Login successful:', result.data);
+          alert(`Welcome back, ${result.data?.user?.name || 'User'}!`);
+          // TODO: Redirect to dashboard or save token
+        } else {
+          console.error('Login failed:', result.error);
+          setLoginErrors({ general: result.error || 'Login failed' });
+        }
+      } else {
+        // Call signup API
+        const result = await signupUser(signupFormData);
+        
+        if (result.success) {
+          console.log('Signup successful:', result.data);
+          alert(`Welcome, ${result.data?.user?.name}! Account created successfully.`);
+          // TODO: Redirect to dashboard or auto-login
+        } else {
+          console.error('Signup failed:', result.error);
+          setSignupErrors({ general: result.error || 'Signup failed' });
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      const errorMessage = 'Something went wrong. Please try again.';
+      
+      if (isLogin) {
+        setLoginErrors({ general: errorMessage });
+      } else {
+        setSignupErrors({ general: errorMessage });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleLoginPassword = () => {
+    setShowLoginPassword(!showLoginPassword);
+  };
+  
+  const handleToggleSignupPassword = () => {
+    setShowSignupPassword(!showSignupPassword);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4 py-6 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-1000"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center px-4 py-8 relative overflow-hidden">
+      {/* Background Elements */}
+      <BackgroundElements isLoaded={isLoaded} />
 
-      {/* Floating particles */}
-      <div className="absolute inset-0">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full opacity-20 animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Main Authentication Container */}
-      <div className="relative w-full max-w-sm sm:max-w-md lg:max-w-lg z-10">
-        {/* Glass morphism card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl border border-white/20 relative">
-          {/* Gradient border effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl sm:rounded-3xl blur-sm -z-10"></div>
+      {/* Main Container */}
+      <div className={`relative w-full max-w-md z-10 transform transition-all duration-1000 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+        {/* Premium glass card */}
+        <div className="relative bg-white/[0.05] backdrop-blur-2xl rounded-3xl p-8 shadow-2xl border border-white/10 overflow-hidden">
+          {/* Enhanced border glow */}
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/20 via-transparent to-blue-500/20 p-px">
+            <div className="w-full h-full bg-transparent rounded-3xl"></div>
+          </div>
           
-          {/* Logo/Brand Section */}
-          <div className="text-center mb-8 sm:mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 rounded-full mb-4 sm:mb-6 shadow-2xl hover:shadow-purple-500/30 transition-all duration-500 hover:scale-110 relative">
-              <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" />
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/50 to-pink-400/50 rounded-full blur-xl animate-pulse"></div>
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text text-transparent drop-shadow-sm">
-              TaskFlow
-            </h1>
-            <p className="text-white/80 text-sm sm:text-base font-medium px-4 sm:px-0">Transform your productivity journey</p>
-            <div className="w-12 sm:w-16 h-0.5 bg-gradient-to-r from-purple-400 to-pink-400 mx-auto mt-3 sm:mt-4 rounded-full"></div>
-          </div>
+          {/* Inner glow effect */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent"></div>
 
-          {/* Mode Toggle Buttons */}
-          <div className="flex bg-black/20 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 mb-8 sm:mb-12 backdrop-blur-sm border border-white/10 shadow-inner">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-3 sm:py-4 px-4 sm:px-6 rounded-xl sm:rounded-2xl text-sm sm:text-base font-semibold transition-all duration-500 relative overflow-hidden ${
-                isLogin
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xl transform scale-105 shadow-purple-500/25'
-                  : 'text-white/70 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {isLogin && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/50 to-pink-600/50 rounded-xl sm:rounded-2xl blur-sm"></div>
-              )}
-              <span className="relative z-10 hidden sm:inline">Welcome Back</span>
-              <span className="relative z-10 sm:hidden">Sign In</span>
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-3 sm:py-4 px-4 sm:px-6 rounded-xl sm:rounded-2xl text-sm sm:text-base font-semibold transition-all duration-500 relative overflow-hidden ${
-                !isLogin
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xl transform scale-105 shadow-purple-500/25'
-                  : 'text-white/70 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {!isLogin && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/50 to-pink-600/50 rounded-xl sm:rounded-2xl blur-sm"></div>
-              )}
-              <span className="relative z-10 hidden sm:inline">Get Started</span>
-              <span className="relative z-10 sm:hidden">Sign Up</span>
-            </button>
-          </div>
+          {/* Brand Section */}
+          <BrandSection isLoaded={isLoaded} />
+
+          {/* Mode Toggle */}
+          <ModeToggle 
+            isLogin={isLogin} 
+            setIsLogin={setIsLogin} 
+            isLoaded={isLoaded} 
+          />
 
           {/* Form Fields */}
-          <div className="space-y-5 sm:space-y-7">
-            {/* Name field (signup only) */}
-            {!isLogin && (
-              <div className="relative group animate-fadeIn">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                  <User className="h-5 w-5 text-white/50 group-focus-within:text-purple-300 transition-colors duration-300" />
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Full Name"
-                  className="w-full pl-12 pr-4 py-4 sm:py-5 bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 focus:bg-white/10 hover:border-white/20 text-base sm:text-lg"
-                />
-              </div>
-            )}
+          <AuthForm
+            isLogin={isLogin}
+            formData={isLogin ? loginFormData : signupFormData}
+            onInputChange={isLogin ? handleLoginInputChange : handleSignupInputChange}
+            showPassword={isLogin ? showLoginPassword : showSignupPassword}
+            onTogglePassword={isLogin ? handleToggleLoginPassword : handleToggleSignupPassword}
+            onSubmit={handleSubmit}
+            isLoaded={isLoaded}
+            errors={isLogin ? loginErrors : signupErrors}
+            isSubmitting={isSubmitting}
+          />
 
-            {/* Email field */}
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                <Mail className="h-5 w-5 text-white/50 group-focus-within:text-purple-300 transition-colors duration-300" />
-              </div>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Email Address"
-                className="w-full pl-12 pr-4 py-4 sm:py-5 bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 focus:bg-white/10 hover:border-white/20 text-base sm:text-lg"
-                required
-              />
-            </div>
-
-            {/* Password field */}
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                <Lock className="h-5 w-5 text-white/50 group-focus-within:text-purple-300 transition-colors duration-300" />
-              </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Password"
-                className="w-full pl-12 pr-12 py-4 sm:py-5 bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50 backdrop-blur-sm transition-all duration-500 hover:bg-white/10 focus:bg-white/10 hover:border-white/20 text-base sm:text-lg"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center z-10 hover:scale-110 transition-transform duration-200"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-white/50 hover:text-white/80 transition-colors" />
-                ) : (
-                  <Eye className="h-5 w-5 text-white/50 hover:text-white/80 transition-colors" />
-                )}
-              </button>
-            </div>
-
-            {/* Forgot password link (login only) */}
-            {isLogin && (
-              <div className="text-right">
-                <a 
-                  href="#" 
-                  className="text-white/70 hover:text-purple-300 text-sm transition-colors duration-300 hover:underline"
-                >
-                  Forgot password?
-                </a>
-              </div>
-            )}
-
-            {/* Submit button */}
-            <button
-              onClick={handleSubmit}
-              className="group relative w-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white font-bold py-4 sm:py-5 rounded-xl sm:rounded-2xl hover:from-purple-600 hover:via-pink-600 hover:to-purple-700 transition-all duration-500 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-400/50 shadow-2xl hover:shadow-purple-500/40 flex items-center justify-center overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-pink-400/20 blur-xl group-hover:blur-lg transition-all duration-500"></div>
-              <span className="relative z-10 mr-2 sm:mr-3 text-base sm:text-lg">
-                {isLogin ? 'Sign In to TaskFlow' : 'Create Your Account'}
-              </span>
-              <ArrowRight className="relative z-10 w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-2 transition-transform duration-500" />
-            </button>
-          </div>
-
-
-          {/* Switch mode link */}
-          <div className="text-center mt-4 sm:mt-6">
-            <p className="text-white/70 text-sm">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+          {/* Switch mode */}
+          <div className={`text-center mt-8 transform transition-all duration-700 delay-900 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+            <p className="text-slate-400 text-sm">
+              {isLogin ? "New to TaskFlow? " : "Already have an account? "}
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-purple-300 hover:text-purple-200 transition-colors duration-300 font-medium hover:underline"
+                className="text-purple-300 hover:text-purple-200 transition-colors duration-300 font-medium hover:underline decoration-purple-300/50 underline-offset-4"
               >
-                {isLogin ? 'Sign up' : 'Sign in'}
+                {isLogin ? 'Create account' : 'Sign in'}
               </button>
             </p>
           </div>
         </div>
 
-        {/* Additional decorative elements */}
-        <div className="absolute -top-2 sm:-top-4 -left-2 sm:-left-4 w-6 h-6 sm:w-8 sm:h-8 bg-purple-500/20 rounded-full blur-sm"></div>
-        <div className="absolute -bottom-2 sm:-bottom-4 -right-2 sm:-right-4 w-8 h-8 sm:w-12 sm:h-12 bg-pink-500/20 rounded-full blur-md"></div>
+        {/* Subtle decorative elements */}
+        <div className="absolute -top-3 -left-3 w-6 h-6 bg-purple-500/10 rounded-full blur-sm"></div>
+        <div className="absolute -bottom-3 -right-3 w-8 h-8 bg-violet-500/10 rounded-full blur-md"></div>
+        <div className="absolute top-1/2 -right-6 w-4 h-4 bg-purple-400/20 rounded-full blur-sm animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
     </div>
   );
 };
 
 export default TaskFlowAuth;
-
-
-
