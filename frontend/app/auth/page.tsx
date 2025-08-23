@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import BackgroundElements from '../../components/ui/BackgroundElements';
 import BrandSection from '../../components/auth/BrandSection';
+import { useRouter } from 'next/navigation';
 import ModeToggle from '../../components/auth/ModeToggle';
 import AuthForm from '../../components/auth/AuthForm';
 import {
@@ -22,6 +23,7 @@ const TaskFlowAuth = () => {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
   
   // Separate states for login and signup forms
   const [loginFormData, setLoginFormData] = useState<LoginFormData>({
@@ -94,7 +96,7 @@ const TaskFlowAuth = () => {
         
         if (result.success) {
           console.log('Login successful:', result.data);
-          alert(`Welcome back, ${result.data?.user?.name || 'User'}!`);
+          router.push('/dashboard');
           // TODO: Redirect to dashboard or save token
         } else {
           console.error('Login failed:', result.error);
@@ -106,7 +108,7 @@ const TaskFlowAuth = () => {
         
         if (result.success) {
           console.log('Signup successful:', result.data);
-          alert(`Welcome, ${result.data?.user?.name}! Account created successfully.`);
+          router.push('/dashboard');
           // TODO: Redirect to dashboard or auto-login
         } else {
           console.error('Signup failed:', result.error);
